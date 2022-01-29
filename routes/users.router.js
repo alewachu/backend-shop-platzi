@@ -1,36 +1,81 @@
 const express = require('express');
-const faker = require('faker');
+
+const UserService = require('./../services/user.service');
+const validatorHandler = require('./../middlewares/validator.handler');
+const {
+  updateUserSchema,
+  createUserSchema,
+  getUserSchema,
+} = require('./../schemas/user.schema');
+
 const router = express.Router();
+const service = new UserService();
 
-// ------- Init Products ------- //
-const users = [];
-for (let i = 0; i < 100; i++) {
-  users.push({
-    id: i + 1,
-    username: faker.internet.email(),
-    password: faker.internet.password(30),
-  });
-}
-// ------- End Products ------- //
-
-router.get('/', (req, res) => {
-  let limit = req.query.limit || 10;
-  const skip = req.query.skip || 0;
-  if (skip) {
-    limit = parseInt(limit) + parseInt(req.query.skip);
-  }
-  const response = users.slice(skip, limit);
-  res.json(response);
-});
-
-router.get('/:id', (req, res) => {
-  const { id } = req.params;
-  const product = users.find((e) => parseInt(e.id) == id);
-  if (product) {
-    res.status(200).json(product);
-  } else {
-    res.status(404).send('404');
+router.get('/', async (req, res, next) => {
+  try {
+    const users = await service.find();
+    res.json(users);
+  } catch (error) {
+    next(error);
   }
 });
 
-module.exports = router
+router.get(
+  '/:id',
+  validatorHandler(getUserSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const category = await service.findOne(id);
+      res.json(category);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  '/',
+  validatorHandler(createUserSchema, 'body'),
+  async (req, res, next) => {
+    try {
+      const body = req.body;
+      const newCategory = await service.create(body);
+      res.status(201).json(newCategory);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.patch(
+  '/:id',
+  validatorHandler(getUserSchema, 'params'),
+  validatorHandler(updateUserSchema, 'body'),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const body = req.body;
+      const category = await service.update(id, body);
+      res.json(category);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.delete(
+  '/:id',
+  validatorHandler(getUserSchema, 'params'),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      await service.delete(id);
+      res.status(201).json({ id });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+module.exports = router;

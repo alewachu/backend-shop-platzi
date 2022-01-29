@@ -1,6 +1,8 @@
 const faker = require('faker');
+const { Op } = require('sequelize');
 const boom = require('@hapi/boom');
 
+const { models } = require('../libs/sequelize');
 
 class ProductsService {
   constructor() {
@@ -9,33 +11,52 @@ class ProductsService {
   }
 
   generate() {
-    for (let i = 0; i < 1000; i++) {
+    const limit = 100;
+    for (let index = 0; index < limit; index++) {
       this.products.push({
         id: faker.datatype.uuid(),
-        title: faker.commerce.productName(),
+        name: faker.commerce.productName(),
         price: parseInt(faker.commerce.price(), 10),
-        image: [faker.image.imageUrl()],
-        department: faker.commerce.department(),
-        description: faker.commerce.productDescription(),
+        image: faker.image.imageUrl(),
         isBlock: faker.datatype.boolean(),
       });
     }
   }
+
   async create(data) {
-    const newProduct = {
-      id: faker.datatype.uuid(),
-      ...data,
-    };
-    this.products.push(newProduct);
+    const newProduct = await models.Product.create(data);
     return newProduct;
   }
 
-  async find() {
-    return this.products;
+  async find(query) {
+    const options = {
+      include: ['category'],
+      where: {},
+    };
+    const { limit, offset } = query;
+    if (limit && offset) {
+      options.limit = limit;
+      options.offset = offset;
+    }
+
+    const { price } = query;
+    if (price) {
+      options.where.price = price;
+    }
+
+    const { price_min, price_max } = query;
+    if (price_min && price_max) {
+      options.where.price = {
+        [Op.gte]: price_min,
+        [Op.lte]: price_max,
+      };
+    }
+    const products = await models.Product.findAll(options);
+    return products;
   }
 
   async findOne(id) {
-    const product = this.products.find((e) => e.id === id);
+    const product = this.products.find((item) => item.id === id);
     if (!product) {
       throw boom.notFound('product not found');
     }
@@ -46,7 +67,7 @@ class ProductsService {
   }
 
   async update(id, changes) {
-    const index = this.products.findIndex((e) => e.id === id);
+    const index = this.products.findIndex((item) => item.id === id);
     if (index === -1) {
       throw boom.notFound('product not found');
     }
@@ -59,12 +80,12 @@ class ProductsService {
   }
 
   async delete(id) {
-    const index = this.products.findIndex((e) => e.id === id);
+    const index = this.products.findIndex((item) => item.id === id);
     if (index === -1) {
       throw boom.notFound('product not found');
     }
     this.products.splice(index, 1);
-    return { message: 'Operation successful' };
+    return { id };
   }
 }
 
