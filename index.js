@@ -1,6 +1,6 @@
 const express = require('express');
 const routerApi = require('./routes');
-
+const { checkApiKey } = require('./middlewares/auth.handler');
 const {
   logErrors,
   errorHandler,
@@ -11,8 +11,18 @@ const {
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(express.json());
+require('./utils/auth')
+
+
+
+
+
+
 app.get('/', (req, res) => {
   res.send('Hola mi server en express');
+});
+app.get('/nueva-ruta', checkApiKey, (req, res) => {
+  res.send('Holaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
 });
 
 routerApi(app);
@@ -22,16 +32,7 @@ app.use(ormErrorHandler);
 app.use(boomErrorHandler);
 app.use(errorHandler);
 
-// app.get('/categories/:categoryId/products/:productId', (req, res) => {
-//   const { categoryId, productId } = req.params;
-//   res.json({
-//     categoryId,
-//     productId,
-//     name: 'Product 1',
-//     price: 200,
-//   });
-// });
-
 app.listen(PORT, () => {
   console.log(`Server is running on Port: ${PORT}`);
 });
+
